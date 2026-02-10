@@ -7,6 +7,7 @@ import (
 
 	"github.com/glebnaz/obsidian2anki/internal/config"
 	"github.com/glebnaz/obsidian2anki/internal/obsidian"
+	"github.com/glebnaz/obsidian2anki/internal/sync"
 )
 
 // Exit codes.
@@ -131,8 +132,20 @@ func runSync(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return ExitFatal
 	}
-	fmt.Println("sync: not yet implemented")
-	return ExitSuccess
+
+	cfg, err := config.Load(gf.Config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return ExitFatal
+	}
+
+	exitCode, err := sync.Run(cfg, gf.DryRun, gf.Verbose, os.Stdout)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return ExitFatal
+	}
+
+	return exitCode
 }
 
 func runTUI(args []string) int {

@@ -80,10 +80,10 @@ func TestRunScanNoConfig(t *testing.T) {
 	}
 }
 
-func TestRunSync(t *testing.T) {
-	code := run([]string{"sync"})
-	if code != ExitSuccess {
-		t.Errorf("expected exit code %d, got %d", ExitSuccess, code)
+func TestRunSyncNoConfig(t *testing.T) {
+	code := run([]string{"sync", "--config", "/nonexistent/config.json"})
+	if code != ExitFatal {
+		t.Errorf("expected exit code %d, got %d", ExitFatal, code)
 	}
 }
 

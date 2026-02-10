@@ -115,15 +115,15 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 10: Implement sync pipeline for CLI command `sync`
 
-* [ ] Call `Version()` and fail without modifying files if it fails
-* [ ] Call `EnsureDeck` and `EnsureModel`
-* [ ] For each markdown file in sorted order, skip if synced
-* [ ] Parse cards; skip file if zero cards
-* [ ] Export CSV for the file
-* [ ] If `--dry-run`, do not import and do not mark synced
-* [ ] Otherwise import all cards and mark synced only if all batches succeed
-* [ ] Return exit code 2 if any file failed, else 0
-* [ ] Mark completed
+* [x] Call `Version()` and fail without modifying files if it fails
+* [x] Call `EnsureDeck` and `EnsureModel`
+* [x] For each markdown file in sorted order, skip if synced
+* [x] Parse cards; skip file if zero cards
+* [x] Export CSV for the file
+* [x] If `--dry-run`, do not import and do not mark synced
+* [x] Otherwise import all cards and mark synced only if all batches succeed
+* [x] Return exit code 2 if any file failed, else 0
+* [x] Mark completed
 
 ### Task 11: Implement Bubble Tea TUI
 

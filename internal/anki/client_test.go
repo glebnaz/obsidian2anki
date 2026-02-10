@@ -451,6 +451,189 @@ func TestDo_ContentTypeJSON(t *testing.T) {
 	_, _ = client.Version()
 }
 
+// --- AddNotes tests ---
+
+func TestAddNotes_Success(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		req := decodeRequest(t, r)
+		if req.Action != "addNotes" {
+			t.Errorf("expected action addNotes, got %s", req.Action)
+		}
+		// Verify params structure
+		params, _ := json.Marshal(req.Params)
+		var p map[string]interface{}
+		_ = json.Unmarshal(params, &p)
+		notes := p["notes"].([]interface{})
+		if len(notes) != 2 {
+			t.Fatalf("expected 2 notes, got %d", len(notes))
+		}
+		note0 := notes[0].(map[string]interface{})
+		if note0["deckName"] != "TestDeck" {
+			t.Errorf("expected deckName TestDeck, got %v", note0["deckName"])
+		}
+		if note0["modelName"] != "TestModel" {
+			t.Errorf("expected modelName TestModel, got %v", note0["modelName"])
+		}
+		fields := note0["fields"].(map[string]interface{})
+		if fields["Front"] != "hello" {
+			t.Errorf("expected Front hello, got %v", fields["Front"])
+		}
+		if fields["Back"] != "world" {
+			t.Errorf("expected Back world, got %v", fields["Back"])
+		}
+		tags := note0["tags"].([]interface{})
+		if len(tags) != 1 || tags[0] != "vocab" {
+			t.Errorf("unexpected tags: %v", tags)
+		}
+		opts := note0["options"].(map[string]interface{})
+		if opts["allowDuplicate"] != false {
+			t.Errorf("expected allowDuplicate false, got %v", opts["allowDuplicate"])
+		}
+
+		// Return two successful note IDs
+		var id1 int64 = 111
+		var id2 int64 = 222
+		writeJSON(t, w, ankiResponse([]interface{}{id1, id2}, nil))
+	})
+
+	notes := []Note{
+		{DeckName: "TestDeck", ModelName: "TestModel", Front: "hello", Back: "world", Tags: []string{"vocab"}, AllowDup: false},
+		{DeckName: "TestDeck", ModelName: "TestModel", Front: "foo", Back: "bar", Tags: []string{"vocab"}, AllowDup: false},
+	}
+	err := client.AddNotes(notes, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAddNotes_PartialFailure(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		// Second note fails (null in result)
+		writeJSON(t, w, ankiResponse([]interface{}{111, nil}, nil))
+	})
+
+	notes := []Note{
+		{DeckName: "D", ModelName: "M", Front: "ok", Back: "ok", Tags: []string{}, AllowDup: false},
+		{DeckName: "D", ModelName: "M", Front: "bad", Back: "bad", Tags: []string{}, AllowDup: false},
+	}
+	err := client.AddNotes(notes, 100)
+	if err == nil {
+		t.Fatal("expected error for null result element, got nil")
+	}
+	if got := err.Error(); got != `anki: addNotes failed for note 1 (Front: "bad")` {
+		t.Errorf("unexpected error message: %q", got)
+	}
+}
+
+func TestAddNotes_Batching(t *testing.T) {
+	batchCount := 0
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		batchCount++
+		req := decodeRequest(t, r)
+		params, _ := json.Marshal(req.Params)
+		var p map[string]interface{}
+		_ = json.Unmarshal(params, &p)
+		notes := p["notes"].([]interface{})
+
+		// First batch should have 2 notes, second batch should have 1
+		results := make([]interface{}, len(notes))
+		for i := range results {
+			results[i] = int64(100 + i)
+		}
+		writeJSON(t, w, ankiResponse(results, nil))
+	})
+
+	notes := []Note{
+		{DeckName: "D", ModelName: "M", Front: "a", Back: "1", Tags: []string{}, AllowDup: false},
+		{DeckName: "D", ModelName: "M", Front: "b", Back: "2", Tags: []string{}, AllowDup: false},
+		{DeckName: "D", ModelName: "M", Front: "c", Back: "3", Tags: []string{}, AllowDup: false},
+	}
+	err := client.AddNotes(notes, 2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if batchCount != 2 {
+		t.Errorf("expected 2 batches, got %d", batchCount)
+	}
+}
+
+func TestAddNotes_AnkiError(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, ankiResponse(nil, strPtr("collection unavailable")))
+	})
+
+	notes := []Note{
+		{DeckName: "D", ModelName: "M", Front: "a", Back: "1", Tags: []string{}, AllowDup: false},
+	}
+	err := client.AddNotes(notes, 100)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestAddNotes_AllowDuplicate(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		req := decodeRequest(t, r)
+		params, _ := json.Marshal(req.Params)
+		var p map[string]interface{}
+		_ = json.Unmarshal(params, &p)
+		notes := p["notes"].([]interface{})
+		note0 := notes[0].(map[string]interface{})
+		opts := note0["options"].(map[string]interface{})
+		if opts["allowDuplicate"] != true {
+			t.Errorf("expected allowDuplicate true, got %v", opts["allowDuplicate"])
+		}
+		writeJSON(t, w, ankiResponse([]interface{}{111}, nil))
+	})
+
+	notes := []Note{
+		{DeckName: "D", ModelName: "M", Front: "a", Back: "1", Tags: []string{}, AllowDup: true},
+	}
+	err := client.AddNotes(notes, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAddNotes_EmptySlice(t *testing.T) {
+	// Should succeed immediately with no API calls
+	callCount := 0
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		writeJSON(t, w, ankiResponse(nil, nil))
+	})
+
+	err := client.AddNotes([]Note{}, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 0 {
+		t.Errorf("expected 0 API calls for empty notes, got %d", callCount)
+	}
+}
+
+func TestAddNotes_BatchFailureStopsEarly(t *testing.T) {
+	batchCount := 0
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		batchCount++
+		// First batch fails with a null
+		writeJSON(t, w, ankiResponse([]interface{}{nil}, nil))
+	})
+
+	notes := []Note{
+		{DeckName: "D", ModelName: "M", Front: "a", Back: "1", Tags: []string{}, AllowDup: false},
+		{DeckName: "D", ModelName: "M", Front: "b", Back: "2", Tags: []string{}, AllowDup: false},
+	}
+	err := client.AddNotes(notes, 1)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	// Should stop after first batch failure
+	if batchCount != 1 {
+		t.Errorf("expected 1 batch call before failure, got %d", batchCount)
+	}
+}
+
 func TestNewClient_Timeout(t *testing.T) {
 	client := NewClient("http://localhost:12345", 100)
 	if client.httpClient.Timeout.Milliseconds() != 100 {

@@ -196,6 +196,68 @@ func (c *Client) EnsureDeck(deck string) error {
 	return nil
 }
 
+// Note represents a single note to be added via addNotes.
+type Note struct {
+	DeckName  string
+	ModelName string
+	Front     string
+	Back      string
+	Tags      []string
+	AllowDup  bool
+}
+
+// AddNotes sends notes to Anki in batches using the addNotes action.
+// Returns an error if any note in any batch fails (null element in result).
+func (c *Client) AddNotes(notes []Note, batchSize int) error {
+	if batchSize <= 0 {
+		batchSize = 100
+	}
+
+	for i := 0; i < len(notes); i += batchSize {
+		end := i + batchSize
+		if end > len(notes) {
+			end = len(notes)
+		}
+		batch := notes[i:end]
+
+		ankiNotes := make([]map[string]interface{}, len(batch))
+		for j, n := range batch {
+			ankiNotes[j] = map[string]interface{}{
+				"deckName":  n.DeckName,
+				"modelName": n.ModelName,
+				"fields": map[string]string{
+					"Front": n.Front,
+					"Back":  n.Back,
+				},
+				"tags": n.Tags,
+				"options": map[string]bool{
+					"allowDuplicate": n.AllowDup,
+				},
+			}
+		}
+
+		raw, err := c.do("addNotes", map[string]interface{}{
+			"notes": ankiNotes,
+		})
+		if err != nil {
+			return fmt.Errorf("anki: addNotes batch %d-%d: %w", i, end-1, err)
+		}
+
+		var results []*int64
+		if err := json.Unmarshal(raw, &results); err != nil {
+			return fmt.Errorf("anki: parse addNotes result: %w", err)
+		}
+
+		for j, id := range results {
+			if id == nil {
+				return fmt.Errorf("anki: addNotes failed for note %d (Front: %q)", i+j, batch[j].Front)
+			}
+		}
+	}
+
+	return nil
+}
+
 // EnsureModel checks if a model exists and creates it if missing.
 func (c *Client) EnsureModel(model string) error {
 	names, err := c.ModelNames()

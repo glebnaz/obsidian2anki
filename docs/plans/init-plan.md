@@ -99,11 +99,11 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 8: Import cards via AnkiConnect addNotes in batches
 
-* [ ] Implement `AddNotes(cards)` using action `addNotes`
-* [ ] Send notes in chunks of `batch_size`
-* [ ] Build each note with `deckName`, `modelName`, `fields` `{ "Front": "...", "Back": "..." }`, `tags`, and `options.allowDuplicate`
-* [ ] Treat any null element in `addNotes` result array as failure and return error
-* [ ] Mark completed
+* [x] Implement `AddNotes(cards)` using action `addNotes`
+* [x] Send notes in chunks of `batch_size`
+* [x] Build each note with `deckName`, `modelName`, `fields` `{ "Front": "...", "Back": "..." }`, `tags`, and `options.allowDuplicate`
+* [x] Treat any null element in `addNotes` result array as failure and return error
+* [x] Mark completed
 
 ### Task 9: Mark markdown file as synced
 

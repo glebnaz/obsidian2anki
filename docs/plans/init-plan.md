@@ -11,13 +11,13 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 1: Initialize project and CLI skeleton
 
-* [ ] Create Go module
-* [ ] Create directories `cmd/obs2anki`, `internal/config`, `internal/obsidian`, `internal/parser`, `internal/csvout`, `internal/anki`, `internal/sync`, `internal/tui`
-* [ ] Implement command routing using `os.Args`
-* [ ] Implement `flag.FlagSet` for `init-config`, `scan`, `sync`, `tui`
-* [ ] Add flags `--config`, `--dry-run`, `--verbose`
-* [ ] Define exit codes `0` success, `1` fatal, `2` partial
-* [ ] Mark completed
+* [x] Create Go module
+* [x] Create directories `cmd/obs2anki`, `internal/config`, `internal/obsidian`, `internal/parser`, `internal/csvout`, `internal/anki`, `internal/sync`, `internal/tui`
+* [x] Implement command routing using `os.Args`
+* [x] Implement `flag.FlagSet` for `init-config`, `scan`, `sync`, `tui`
+* [x] Add flags `--config`, `--dry-run`, `--verbose`
+* [x] Define exit codes `0` success, `1` fatal, `2` partial
+* [x] Mark completed
 
 ### Task 2: Implement JSON config and loading rules
 

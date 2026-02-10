@@ -50,16 +50,16 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 4: Parse markdown table `Front | Back` with exactly two columns
 
-* [ ] Find the first table whose header row has exactly `Front` and `Back` (case-sensitive)
-* [ ] Require a valid separator row after the header
-* [ ] Parse each data row into exactly two cells
-* [ ] Trim whitespace around cells
-* [ ] Preserve cell content as-is including `<br>`
-* [ ] Skip row with warning if not exactly two cells
-* [ ] Skip row with warning if Front is empty
-* [ ] Skip row with warning if Back is empty
-* [ ] Return cards and warnings
-* [ ] Mark completed
+* [x] Find the first table whose header row has exactly `Front` and `Back` (case-sensitive)
+* [x] Require a valid separator row after the header
+* [x] Parse each data row into exactly two cells
+* [x] Trim whitespace around cells
+* [x] Preserve cell content as-is including `<br>`
+* [x] Skip row with warning if not exactly two cells
+* [x] Skip row with warning if Front is empty
+* [x] Skip row with warning if Back is empty
+* [x] Return cards and warnings
+* [x] Mark completed
 
 ### Task 5: Export CSV using `;` with exactly one delimiter per data line
 

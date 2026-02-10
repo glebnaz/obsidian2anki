@@ -8,6 +8,7 @@ import (
 	"github.com/glebnaz/obsidian2anki/internal/config"
 	"github.com/glebnaz/obsidian2anki/internal/obsidian"
 	"github.com/glebnaz/obsidian2anki/internal/sync"
+	"github.com/glebnaz/obsidian2anki/internal/tui"
 )
 
 // Exit codes.
@@ -155,6 +156,17 @@ func runTUI(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return ExitFatal
 	}
-	fmt.Println("tui: not yet implemented")
+
+	cfg, err := config.Load(gf.Config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return ExitFatal
+	}
+
+	if err := tui.Run(cfg, gf.DryRun); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return ExitFatal
+	}
+
 	return ExitSuccess
 }

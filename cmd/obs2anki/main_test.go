@@ -87,10 +87,10 @@ func TestRunSyncNoConfig(t *testing.T) {
 	}
 }
 
-func TestRunTUI(t *testing.T) {
-	code := run([]string{"tui"})
-	if code != ExitSuccess {
-		t.Errorf("expected exit code %d, got %d", ExitSuccess, code)
+func TestRunTUINoConfig(t *testing.T) {
+	code := run([]string{"tui", "--config", "/nonexistent/config.json"})
+	if code != ExitFatal {
+		t.Errorf("expected exit code %d, got %d", ExitFatal, code)
 	}
 }
 

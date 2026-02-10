@@ -127,10 +127,10 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 11: Implement Bubble Tea TUI
 
-* [ ] Show list of files with synced status and card count
-* [ ] Show preview of first N cards for selected file
-* [ ] Run sync for selected file or all files with progress display
-* [ ] Key bindings `q` exit, `enter` toggle preview, `s` sync selected, `a` sync all, `r` rescan
-* [ ] Reuse the same scan/sync logic as CLI
-* [ ] Mark completed
+* [x] Show list of files with synced status and card count
+* [x] Show preview of first N cards for selected file
+* [x] Run sync for selected file or all files with progress display
+* [x] Key bindings `q` exit, `enter` toggle preview, `s` sync selected, `a` sync all, `r` rescan
+* [x] Reuse the same scan/sync logic as CLI
+* [x] Mark completed
 

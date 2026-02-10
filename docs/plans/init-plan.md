@@ -107,11 +107,11 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 9: Mark markdown file as synced
 
-* [ ] Update or create YAML frontmatter keys `anki_synced`, `anki_synced_at`, `anki_deck`, `anki_model`
-* [ ] Use RFC3339 timestamp for `anki_synced_at`
-* [ ] Write file atomically using temp file then rename
-* [ ] If `mark_checkbox` is true, replace `- [ ] anki_synced` with `- [x] anki_synced` or append it
-* [ ] Mark completed
+* [x] Update or create YAML frontmatter keys `anki_synced`, `anki_synced_at`, `anki_deck`, `anki_model`
+* [x] Use RFC3339 timestamp for `anki_synced_at`
+* [x] Write file atomically using temp file then rename
+* [x] If `mark_checkbox` is true, replace `- [ ] anki_synced` with `- [x] anki_synced` or append it
+* [x] Mark completed
 
 ### Task 10: Implement sync pipeline for CLI command `sync`
 

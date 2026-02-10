@@ -91,11 +91,11 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 7: Ensure deck and model exist
 
-* [ ] Implement `EnsureDeck(deck)` by calling `deckNames` and `createDeck` if missing
-* [ ] Implement `EnsureModel(model)` by calling `modelNames` and `createModel` if missing
-* [ ] Implement `createModel` request with params `modelName`, `inOrderFields` `["Front","Back"]`, and one template `Name` `Card 1`, `Front` `{{Front}}`, `Back` `{{Front}}<hr>{{Back}}`
-* [ ] Add tests verifying `createDeck` and `createModel` are called when missing
-* [ ] Mark completed
+* [x] Implement `EnsureDeck(deck)` by calling `deckNames` and `createDeck` if missing
+* [x] Implement `EnsureModel(model)` by calling `modelNames` and `createModel` if missing
+* [x] Implement `createModel` request with params `modelName`, `inOrderFields` `["Front","Back"]`, and one template `Name` `Card 1`, `Front` `{{Front}}`, `Back` `{{Front}}<hr>{{Back}}`
+* [x] Add tests verifying `createDeck` and `createModel` are called when missing
+* [x] Mark completed
 
 ### Task 8: Import cards via AnkiConnect addNotes in batches
 

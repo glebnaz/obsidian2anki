@@ -144,3 +144,75 @@ func (c *Client) ModelNames() ([]string, error) {
 
 	return names, nil
 }
+
+// CreateModel creates a new note type with Front/Back fields and a single card template.
+func (c *Client) CreateModel(name string) (int64, error) {
+	params := map[string]interface{}{
+		"modelName":     name,
+		"inOrderFields": []string{"Front", "Back"},
+		"cardTemplates": []map[string]string{
+			{
+				"Name":  "Card 1",
+				"Front": "{{Front}}",
+				"Back":  "{{Front}}<hr>{{Back}}",
+			},
+		},
+	}
+
+	raw, err := c.do("createModel", params)
+	if err != nil {
+		return 0, err
+	}
+
+	// createModel returns a model object; extract the id field.
+	var model struct {
+		ID int64 `json:"id"`
+	}
+	if err := json.Unmarshal(raw, &model); err != nil {
+		return 0, fmt.Errorf("anki: parse createModel result: %w", err)
+	}
+
+	return model.ID, nil
+}
+
+// EnsureDeck checks if a deck exists and creates it if missing.
+func (c *Client) EnsureDeck(deck string) error {
+	names, err := c.DeckNames()
+	if err != nil {
+		return fmt.Errorf("anki: ensure deck: %w", err)
+	}
+
+	for _, n := range names {
+		if n == deck {
+			return nil
+		}
+	}
+
+	_, err = c.CreateDeck(deck)
+	if err != nil {
+		return fmt.Errorf("anki: ensure deck: %w", err)
+	}
+
+	return nil
+}
+
+// EnsureModel checks if a model exists and creates it if missing.
+func (c *Client) EnsureModel(model string) error {
+	names, err := c.ModelNames()
+	if err != nil {
+		return fmt.Errorf("anki: ensure model: %w", err)
+	}
+
+	for _, n := range names {
+		if n == model {
+			return nil
+		}
+	}
+
+	_, err = c.CreateModel(model)
+	if err != nil {
+		return fmt.Errorf("anki: ensure model: %w", err)
+	}
+
+	return nil
+}

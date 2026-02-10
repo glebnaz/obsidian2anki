@@ -226,6 +226,184 @@ func TestModelNames_AnkiError(t *testing.T) {
 	}
 }
 
+// --- CreateModel tests ---
+
+func TestCreateModel_Success(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		req := decodeRequest(t, r)
+		if req.Action != "createModel" {
+			t.Errorf("expected action createModel, got %s", req.Action)
+		}
+		params, err := json.Marshal(req.Params)
+		if err != nil {
+			t.Fatalf("marshal params: %v", err)
+		}
+		var p map[string]interface{}
+		if err := json.Unmarshal(params, &p); err != nil {
+			t.Fatalf("unmarshal params: %v", err)
+		}
+		if p["modelName"] != "MyModel" {
+			t.Errorf("expected modelName MyModel, got %v", p["modelName"])
+		}
+		fields := p["inOrderFields"].([]interface{})
+		if len(fields) != 2 || fields[0] != "Front" || fields[1] != "Back" {
+			t.Errorf("unexpected inOrderFields: %v", fields)
+		}
+		templates := p["cardTemplates"].([]interface{})
+		if len(templates) != 1 {
+			t.Fatalf("expected 1 template, got %d", len(templates))
+		}
+		tmpl := templates[0].(map[string]interface{})
+		if tmpl["Name"] != "Card 1" {
+			t.Errorf("expected template name Card 1, got %v", tmpl["Name"])
+		}
+		if tmpl["Front"] != "{{Front}}" {
+			t.Errorf("unexpected front template: %v", tmpl["Front"])
+		}
+		if tmpl["Back"] != "{{Front}}<hr>{{Back}}" {
+			t.Errorf("unexpected back template: %v", tmpl["Back"])
+		}
+		result := map[string]interface{}{"id": 1609876543210}
+		writeJSON(t, w, ankiResponse(result, nil))
+	})
+
+	id, err := client.CreateModel("MyModel")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id != 1609876543210 {
+		t.Errorf("expected id 1609876543210, got %d", id)
+	}
+}
+
+func TestCreateModel_AnkiError(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, ankiResponse(nil, strPtr("model already exists")))
+	})
+
+	_, err := client.CreateModel("Bad")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// --- EnsureDeck tests ---
+
+func TestEnsureDeck_AlreadyExists(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		req := decodeRequest(t, r)
+		if req.Action != "deckNames" {
+			t.Errorf("expected only deckNames call, got %s", req.Action)
+		}
+		writeJSON(t, w, ankiResponse([]string{"Default", "Vocab"}, nil))
+	})
+
+	err := client.EnsureDeck("Vocab")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestEnsureDeck_CreateWhenMissing(t *testing.T) {
+	callCount := 0
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		req := decodeRequest(t, r)
+		callCount++
+		switch req.Action {
+		case "deckNames":
+			writeJSON(t, w, ankiResponse([]string{"Default"}, nil))
+		case "createDeck":
+			params, _ := json.Marshal(req.Params)
+			var p map[string]string
+			_ = json.Unmarshal(params, &p)
+			if p["deck"] != "NewDeck" {
+				t.Errorf("expected deck NewDeck, got %s", p["deck"])
+			}
+			writeJSON(t, w, ankiResponse(1234567890, nil))
+		default:
+			t.Errorf("unexpected action: %s", req.Action)
+		}
+	})
+
+	err := client.EnsureDeck("NewDeck")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 2 {
+		t.Errorf("expected 2 API calls (deckNames + createDeck), got %d", callCount)
+	}
+}
+
+func TestEnsureDeck_DeckNamesError(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, ankiResponse(nil, strPtr("collection unavailable")))
+	})
+
+	err := client.EnsureDeck("Vocab")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+// --- EnsureModel tests ---
+
+func TestEnsureModel_AlreadyExists(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		req := decodeRequest(t, r)
+		if req.Action != "modelNames" {
+			t.Errorf("expected only modelNames call, got %s", req.Action)
+		}
+		writeJSON(t, w, ankiResponse([]string{"Basic", "MyModel"}, nil))
+	})
+
+	err := client.EnsureModel("MyModel")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestEnsureModel_CreateWhenMissing(t *testing.T) {
+	callCount := 0
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		req := decodeRequest(t, r)
+		callCount++
+		switch req.Action {
+		case "modelNames":
+			writeJSON(t, w, ankiResponse([]string{"Basic"}, nil))
+		case "createModel":
+			params, _ := json.Marshal(req.Params)
+			var p map[string]interface{}
+			_ = json.Unmarshal(params, &p)
+			if p["modelName"] != "NewModel" {
+				t.Errorf("expected modelName NewModel, got %v", p["modelName"])
+			}
+			result := map[string]interface{}{"id": 9876543210}
+			writeJSON(t, w, ankiResponse(result, nil))
+		default:
+			t.Errorf("unexpected action: %s", req.Action)
+		}
+	})
+
+	err := client.EnsureModel("NewModel")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 2 {
+		t.Errorf("expected 2 API calls (modelNames + createModel), got %d", callCount)
+	}
+}
+
+func TestEnsureModel_ModelNamesError(t *testing.T) {
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(t, w, ankiResponse(nil, strPtr("collection unavailable")))
+	})
+
+	err := client.EnsureModel("MyModel")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
 // --- General error handling tests ---
 
 func TestDo_HTTP500_LongBody(t *testing.T) {

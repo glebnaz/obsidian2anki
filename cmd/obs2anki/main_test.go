@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -37,10 +39,44 @@ func TestRunInitConfig(t *testing.T) {
 	}
 }
 
+func writeScanConfig(t *testing.T, dir string) string {
+	t.Helper()
+	vault := filepath.Join(dir, "vault")
+	notesDir := filepath.Join(vault, "vocab")
+	if err := os.MkdirAll(notesDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := map[string]any{
+		"vault_path": vault,
+		"notes_dir":  "vocab",
+		"deck":       "TestDeck",
+		"model":      "Basic",
+		"csv_dir":    ".anki_csv",
+	}
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfgPath := filepath.Join(dir, "config.json")
+	if err := os.WriteFile(cfgPath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return cfgPath
+}
+
 func TestRunScan(t *testing.T) {
-	code := run([]string{"scan"})
+	dir := t.TempDir()
+	cfgPath := writeScanConfig(t, dir)
+	code := run([]string{"scan", "--config", cfgPath})
 	if code != ExitSuccess {
 		t.Errorf("expected exit code %d, got %d", ExitSuccess, code)
+	}
+}
+
+func TestRunScanNoConfig(t *testing.T) {
+	code := run([]string{"scan", "--config", "/nonexistent/config.json"})
+	if code != ExitFatal {
+		t.Errorf("expected exit code %d, got %d", ExitFatal, code)
 	}
 }
 
@@ -59,8 +95,9 @@ func TestRunTUI(t *testing.T) {
 }
 
 func TestGlobalFlags(t *testing.T) {
-	// Test that flags are parsed without error
-	code := run([]string{"scan", "--config", "/tmp/test.json", "--dry-run", "--verbose"})
+	dir := t.TempDir()
+	cfgPath := writeScanConfig(t, dir)
+	code := run([]string{"scan", "--config", cfgPath, "--dry-run", "--verbose"})
 	if code != ExitSuccess {
 		t.Errorf("expected exit code %d, got %d", ExitSuccess, code)
 	}

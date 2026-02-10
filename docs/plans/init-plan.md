@@ -38,15 +38,15 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 3: Scan markdown files and detect synced state
 
-* [ ] Recursively list all `.md` files under `join(vault_path, notes_dir)`
-* [ ] Sort file paths lexicographically
-* [ ] Read each file as UTF-8
-* [ ] Extract YAML frontmatter only if the first line is `---`
-* [ ] End frontmatter at the next line that is exactly `---`
-* [ ] Parse frontmatter using `yaml.v3`
-* [ ] Treat file as synced only if `anki_synced` exists and is boolean true
-* [ ] Implement `scan` output: path, synced true/false, has_table true/false, cards_count integer
-* [ ] Mark completed
+* [x] Recursively list all `.md` files under `join(vault_path, notes_dir)`
+* [x] Sort file paths lexicographically
+* [x] Read each file as UTF-8
+* [x] Extract YAML frontmatter only if the first line is `---`
+* [x] End frontmatter at the next line that is exactly `---`
+* [x] Parse frontmatter using `yaml.v3`
+* [x] Treat file as synced only if `anki_synced` exists and is boolean true
+* [x] Implement `scan` output: path, synced true/false, has_table true/false, cards_count integer
+* [x] Mark completed
 
 ### Task 4: Parse markdown table `Front | Back` with exactly two columns
 

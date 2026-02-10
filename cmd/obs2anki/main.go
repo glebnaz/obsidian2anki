@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/glebnaz/obsidian2anki/internal/config"
+	"github.com/glebnaz/obsidian2anki/internal/obsidian"
 )
 
 // Exit codes.
@@ -104,7 +105,22 @@ func runScan(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return ExitFatal
 	}
-	fmt.Println("scan: not yet implemented")
+
+	cfg, err := config.Load(gf.Config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return ExitFatal
+	}
+
+	files, err := obsidian.ScanFiles(cfg.NotesDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return ExitFatal
+	}
+
+	for _, f := range files {
+		fmt.Printf("%s  synced=%t  has_table=%t  cards=%d\n", f.Path, f.Synced, f.HasTable, f.CardsCount)
+	}
 	return ExitSuccess
 }
 

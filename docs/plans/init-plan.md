@@ -63,15 +63,15 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 5: Export CSV using `;` with exactly one delimiter per data line
 
-* [ ] Write header `Front;Back\n`
-* [ ] For each card write `<Front>;<Back>\n`
-* [ ] Replace all `;` in Front with `,`
-* [ ] Replace all `;` in Back with `,`
-* [ ] Normalize `\r\n` and `\r` to `\n` inside fields
-* [ ] Do not quote fields
-* [ ] Write CSV to `<csv_dir>/<md_base_name>-<timestamp_rfc3339_basic>.csv`
-* [ ] Validate each data line contains exactly one `;`
-* [ ] Mark completed
+* [x] Write header `Front;Back\n`
+* [x] For each card write `<Front>;<Back>\n`
+* [x] Replace all `;` in Front with `,`
+* [x] Replace all `;` in Back with `,`
+* [x] Normalize `\r\n` and `\r` to `\n` inside fields
+* [x] Do not quote fields
+* [x] Write CSV to `<csv_dir>/<md_base_name>-<timestamp_rfc3339_basic>.csv`
+* [x] Validate each data line contains exactly one `;`
+* [x] Mark completed
 
 ### Task 6: Implement AnkiConnect HTTP client
 

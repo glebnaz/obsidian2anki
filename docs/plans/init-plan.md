@@ -75,19 +75,19 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 6: Implement AnkiConnect HTTP client
 
-* [ ] Use HTTP POST to `anki_endpoint` with `Content-Type: application/json`
-* [ ] Use request `version` value 6 in every call
-* [ ] Use timeout `request_timeout_ms`
-* [ ] Send request JSON with fields `action`, `version`, and optional `params`
-* [ ] Parse response JSON with fields `result` and `error`
-* [ ] Treat non-null `error` as Go error
-* [ ] Treat non-200 HTTP status as Go error including a short body snippet
-* [ ] Implement `Version()` using action `version` returning int
-* [ ] Implement `DeckNames()` using action `deckNames` returning []string
-* [ ] Implement `CreateDeck(name)` using action `createDeck` with params `{ "deck": name }` returning deck id
-* [ ] Implement `ModelNames()` using action `modelNames` returning []string
-* [ ] Add `httptest.Server` tests for success, anki error, non-JSON, and HTTP 500
-* [ ] Mark completed
+* [x] Use HTTP POST to `anki_endpoint` with `Content-Type: application/json`
+* [x] Use request `version` value 6 in every call
+* [x] Use timeout `request_timeout_ms`
+* [x] Send request JSON with fields `action`, `version`, and optional `params`
+* [x] Parse response JSON with fields `result` and `error`
+* [x] Treat non-null `error` as Go error
+* [x] Treat non-200 HTTP status as Go error including a short body snippet
+* [x] Implement `Version()` using action `version` returning int
+* [x] Implement `DeckNames()` using action `deckNames` returning []string
+* [x] Implement `CreateDeck(name)` using action `createDeck` with params `{ "deck": name }` returning deck id
+* [x] Implement `ModelNames()` using action `modelNames` returning []string
+* [x] Add `httptest.Server` tests for success, anki error, non-JSON, and HTTP 500
+* [x] Mark completed
 
 ### Task 7: Ensure deck and model exist
 

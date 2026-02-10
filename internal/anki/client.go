@@ -1,0 +1,146 @@
+package anki
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+)
+
+// Client communicates with Anki via the AnkiConnect HTTP JSON API.
+type Client struct {
+	endpoint   string
+	httpClient *http.Client
+}
+
+// NewClient creates a new AnkiConnect client.
+func NewClient(endpoint string, timeoutMs int) *Client {
+	return &Client{
+		endpoint: endpoint,
+		httpClient: &http.Client{
+			Timeout: time.Duration(timeoutMs) * time.Millisecond,
+		},
+	}
+}
+
+type request struct {
+	Action  string      `json:"action"`
+	Version int         `json:"version"`
+	Params  interface{} `json:"params,omitempty"`
+}
+
+type response struct {
+	Result json.RawMessage `json:"result"`
+	Error  *string         `json:"error"`
+}
+
+func (c *Client) do(action string, params interface{}) (json.RawMessage, error) {
+	req := request{
+		Action:  action,
+		Version: 6,
+		Params:  params,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("anki: marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequest(http.MethodPost, c.endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("anki: create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("anki: send request: %w", err)
+	}
+	defer func() { _ = httpResp.Body.Close() }()
+
+	respBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("anki: read response: %w", err)
+	}
+
+	if httpResp.StatusCode != http.StatusOK {
+		snippet := string(respBody)
+		if len(snippet) > 200 {
+			snippet = snippet[:200]
+		}
+		return nil, fmt.Errorf("anki: HTTP %d: %s", httpResp.StatusCode, snippet)
+	}
+
+	var resp response
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, fmt.Errorf("anki: parse response: %w", err)
+	}
+
+	if resp.Error != nil {
+		return nil, fmt.Errorf("anki: %s", *resp.Error)
+	}
+
+	return resp.Result, nil
+}
+
+// Version returns the AnkiConnect API version.
+func (c *Client) Version() (int, error) {
+	raw, err := c.do("version", nil)
+	if err != nil {
+		return 0, err
+	}
+
+	var version int
+	if err := json.Unmarshal(raw, &version); err != nil {
+		return 0, fmt.Errorf("anki: parse version result: %w", err)
+	}
+
+	return version, nil
+}
+
+// DeckNames returns the list of deck names in Anki.
+func (c *Client) DeckNames() ([]string, error) {
+	raw, err := c.do("deckNames", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	if err := json.Unmarshal(raw, &names); err != nil {
+		return nil, fmt.Errorf("anki: parse deckNames result: %w", err)
+	}
+
+	return names, nil
+}
+
+// CreateDeck creates a new deck and returns its ID.
+func (c *Client) CreateDeck(name string) (int64, error) {
+	raw, err := c.do("createDeck", map[string]string{"deck": name})
+	if err != nil {
+		return 0, err
+	}
+
+	var id int64
+	if err := json.Unmarshal(raw, &id); err != nil {
+		return 0, fmt.Errorf("anki: parse createDeck result: %w", err)
+	}
+
+	return id, nil
+}
+
+// ModelNames returns the list of model (note type) names in Anki.
+func (c *Client) ModelNames() ([]string, error) {
+	raw, err := c.do("modelNames", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	if err := json.Unmarshal(raw, &names); err != nil {
+		return nil, fmt.Errorf("anki: parse modelNames result: %w", err)
+	}
+
+	return names, nil
+}

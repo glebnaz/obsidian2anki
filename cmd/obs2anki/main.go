@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/glebnaz/obsidian2anki/internal/config"
 )
 
 // Exit codes.
@@ -80,7 +82,18 @@ func runInitConfig(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return ExitFatal
 	}
-	fmt.Println("init-config: not yet implemented")
+
+	path := gf.Config
+	if err := config.InitConfig(path); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return ExitFatal
+	}
+
+	if path == "" {
+		p, _ := config.DefaultConfigPath()
+		path = p
+	}
+	fmt.Printf("config written to %s\n", path)
 	return ExitSuccess
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -28,7 +29,9 @@ func TestRunHelp(t *testing.T) {
 }
 
 func TestRunInitConfig(t *testing.T) {
-	code := run([]string{"init-config"})
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.json")
+	code := run([]string{"init-config", "--config", cfgPath})
 	if code != ExitSuccess {
 		t.Errorf("expected exit code %d, got %d", ExitSuccess, code)
 	}

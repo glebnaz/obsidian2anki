@@ -21,20 +21,20 @@ Implement a Go CLI tool `obs2anki` that scans all `.md` files in `{vault_path}/{
 
 ### Task 2: Implement JSON config and loading rules
 
-* [ ] Set default config path `~/.config/obs2anki/config.json`
-* [ ] Define required fields `vault_path`, `notes_dir`, `deck`, `model`, `csv_dir`
-* [ ] Define optional fields `anki_endpoint` default `http://127.0.0.1:8765`
-* [ ] Define optional fields `mark_checkbox` default false
-* [ ] Define optional fields `allow_duplicates` default false
-* [ ] Define optional fields `tags` default `["obsidian","voc_list"]`
-* [ ] Define optional fields `request_timeout_ms` default 5000
-* [ ] Define optional fields `batch_size` default 100
-* [ ] Load config via `encoding/json`
-* [ ] Resolve `notes_dir` relative to `vault_path`
-* [ ] Resolve `csv_dir` relative to `vault_path` if not absolute
-* [ ] Validate required fields and return error listing all missing fields
-* [ ] Implement `init-config` to create `~/.config/obs2anki` and write a full template JSON
-* [ ] Mark completed
+* [x] Set default config path `~/.config/obs2anki/config.json`
+* [x] Define required fields `vault_path`, `notes_dir`, `deck`, `model`, `csv_dir`
+* [x] Define optional fields `anki_endpoint` default `http://127.0.0.1:8765`
+* [x] Define optional fields `mark_checkbox` default false
+* [x] Define optional fields `allow_duplicates` default false
+* [x] Define optional fields `tags` default `["obsidian","voc_list"]`
+* [x] Define optional fields `request_timeout_ms` default 5000
+* [x] Define optional fields `batch_size` default 100
+* [x] Load config via `encoding/json`
+* [x] Resolve `notes_dir` relative to `vault_path`
+* [x] Resolve `csv_dir` relative to `vault_path` if not absolute
+* [x] Validate required fields and return error listing all missing fields
+* [x] Implement `init-config` to create `~/.config/obs2anki` and write a full template JSON
+* [x] Mark completed
 
 ### Task 3: Scan markdown files and detect synced state
 

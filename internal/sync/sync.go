@@ -136,10 +136,9 @@ func Run(cfg *config.Config, dryRun, verbose bool, out io.Writer) (int, error) {
 
 		// Mark file as synced.
 		if err := obsidian.MarkSynced(f.Path, obsidian.MarkSyncedOptions{
-			Deck:         cfg.Deck,
-			Model:        cfg.Model,
-			MarkCheckbox: cfg.MarkCheckbox,
-			Now:          now,
+			Deck:  cfg.Deck,
+			Model: cfg.Model,
+			Now:   now,
 		}); err != nil {
 			_, _ = fmt.Fprintf(out, "error marking %s as synced: %v\n", f.Path, err)
 			result.Failed++

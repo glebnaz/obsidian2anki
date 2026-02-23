@@ -219,7 +219,7 @@ func TestMarkSynced_PreservesPermissions(t *testing.T) {
 	}
 }
 
-func TestMarkSynced_MarkCheckbox_ReplaceExisting(t *testing.T) {
+func TestMarkSynced_RemovesUncheckedCheckbox(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.md")
 	original := "---\ntitle: test\n---\n# Heading\n- [ ] anki_synced\nMore text\n"
@@ -227,12 +227,7 @@ func TestMarkSynced_MarkCheckbox_ReplaceExisting(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := MarkSynced(path, MarkSyncedOptions{
-		Deck:         "D",
-		Model:        "M",
-		MarkCheckbox: true,
-		Now:          testTime,
-	})
+	err := MarkSynced(path, MarkSyncedOptions{Deck: "D", Model: "M", Now: testTime})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,12 +238,37 @@ func TestMarkSynced_MarkCheckbox_ReplaceExisting(t *testing.T) {
 	}
 	content := string(data)
 
-	assertContains(t, content, "- [x] anki_synced")
-	assertNotContains(t, content, "- [ ] anki_synced")
+	assertNotContains(t, content, "anki_synced\n")
 	assertContains(t, content, "More text")
+	assertContains(t, content, "anki_synced: true")
 }
 
-func TestMarkSynced_MarkCheckbox_AppendIfAbsent(t *testing.T) {
+func TestMarkSynced_RemovesCheckedCheckbox(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test.md")
+	original := "---\ntitle: test\n---\n- [x] anki_synced\nMore text\n"
+	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := MarkSynced(path, MarkSyncedOptions{Deck: "D", Model: "M", Now: testTime})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+
+	assertNotContains(t, content, "- [x] anki_synced")
+	assertNotContains(t, content, "- [ ] anki_synced")
+	assertContains(t, content, "More text")
+	assertContains(t, content, "anki_synced: true")
+}
+
+func TestMarkSynced_NoCheckboxInBody_NoChange(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.md")
 	original := "---\ntitle: test\n---\n# Content\n"
@@ -256,12 +276,7 @@ func TestMarkSynced_MarkCheckbox_AppendIfAbsent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := MarkSynced(path, MarkSyncedOptions{
-		Deck:         "D",
-		Model:        "M",
-		MarkCheckbox: true,
-		Now:          testTime,
-	})
+	err := MarkSynced(path, MarkSyncedOptions{Deck: "D", Model: "M", Now: testTime})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,22 +287,26 @@ func TestMarkSynced_MarkCheckbox_AppendIfAbsent(t *testing.T) {
 	}
 	content := string(data)
 
-	assertContains(t, content, "- [x] anki_synced")
+	assertNotContains(t, content, "- [x] anki_synced")
+	assertNotContains(t, content, "- [ ] anki_synced")
+	assertContains(t, content, "anki_synced: true")
 }
 
-func TestMarkSynced_MarkCheckbox_AlreadyChecked(t *testing.T) {
+// TestMarkSynced_IsSyncedRoundtrip verifies that after MarkSynced, isSynced returns true.
+// This exercises the full roundtrip including complex Obsidian-style frontmatter.
+func TestMarkSynced_IsSyncedRoundtrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.md")
-	original := "---\ntitle: test\n---\n- [x] anki_synced\n"
+	// Mirrors the structure of a real Obsidian note with complex frontmatter.
+	original := "---\ntype: Resource\ntags:\n    - german\n    - voc_list\ncreated-at: 2026-02-23T19:27\n---\n# My Note\n\n| Front | Back |\n|-------|------|\n| hello | world |\n"
 	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	err := MarkSynced(path, MarkSyncedOptions{
-		Deck:         "D",
-		Model:        "M",
-		MarkCheckbox: true,
-		Now:          testTime,
+		Deck:  "German",
+		Model: "Basic",
+		Now:   testTime,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -299,39 +318,12 @@ func TestMarkSynced_MarkCheckbox_AlreadyChecked(t *testing.T) {
 	}
 	content := string(data)
 
-	// Should have exactly one checked checkbox.
-	count := strings.Count(content, "- [x] anki_synced")
-	if count != 1 {
-		t.Errorf("expected exactly one checked checkbox, got %d", count)
+	if !isSynced(content) {
+		t.Errorf("expected isSynced=true after MarkSynced, got false. Content:\n%s", content)
 	}
-}
-
-func TestMarkSynced_MarkCheckboxFalse(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "test.md")
-	original := "---\ntitle: test\n---\n- [ ] anki_synced\n"
-	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	err := MarkSynced(path, MarkSyncedOptions{
-		Deck:         "D",
-		Model:        "M",
-		MarkCheckbox: false,
-		Now:          testTime,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	content := string(data)
-
-	// Checkbox should remain unchecked when MarkCheckbox is false.
-	assertContains(t, content, "- [ ] anki_synced")
+	assertContains(t, content, "anki_synced: true")
+	assertContains(t, content, "type: Resource")
+	assertContains(t, content, "# My Note")
 }
 
 func TestMarkSynced_CRLFNormalization(t *testing.T) {
@@ -481,25 +473,28 @@ func TestAtomicWrite(t *testing.T) {
 	}
 }
 
-func TestUpdateCheckbox_Replace(t *testing.T) {
+func TestRemoveCheckbox_Unchecked(t *testing.T) {
 	input := "# Title\n- [ ] anki_synced\nMore text\n"
-	result := updateCheckbox(input)
-	assertContains(t, result, "- [x] anki_synced")
+	result := removeCheckbox(input)
 	assertNotContains(t, result, "- [ ] anki_synced")
+	assertNotContains(t, result, "- [x] anki_synced")
+	assertContains(t, result, "More text")
 }
 
-func TestUpdateCheckbox_AlreadyChecked(t *testing.T) {
+func TestRemoveCheckbox_Checked(t *testing.T) {
 	input := "# Title\n- [x] anki_synced\nMore text\n"
-	result := updateCheckbox(input)
-	if result != input {
-		t.Errorf("expected no changes, got:\n%s", result)
-	}
+	result := removeCheckbox(input)
+	assertNotContains(t, result, "- [x] anki_synced")
+	assertNotContains(t, result, "- [ ] anki_synced")
+	assertContains(t, result, "More text")
 }
 
-func TestUpdateCheckbox_Append(t *testing.T) {
+func TestRemoveCheckbox_NoCheckbox(t *testing.T) {
 	input := "# Title\nSome text\n"
-	result := updateCheckbox(input)
-	assertContains(t, result, "- [x] anki_synced")
+	result := removeCheckbox(input)
+	if result != input {
+		t.Errorf("expected no changes when no checkbox present, got:\n%s", result)
+	}
 }
 
 func TestStripFrontmatter(t *testing.T) {

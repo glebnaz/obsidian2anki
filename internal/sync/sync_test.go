@@ -97,7 +97,6 @@ func setupTestEnv(t *testing.T, handler http.Handler) (*config.Config, string) {
 		AnkiEndpoint:     srv.URL,
 		Tags:             []string{"test"},
 		AllowDuplicates:  false,
-		MarkCheckbox:     false,
 		RequestTimeoutMs: 5000,
 		BatchSize:        100,
 	}

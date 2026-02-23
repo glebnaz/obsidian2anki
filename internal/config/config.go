@@ -25,7 +25,6 @@ type Config struct {
 
 	// Optional fields
 	AnkiEndpoint    string   `json:"anki_endpoint"`
-	MarkCheckbox    bool     `json:"mark_checkbox"`
 	AllowDuplicates bool     `json:"allow_duplicates"`
 	Tags            []string `json:"tags"`
 	RequestTimeoutMs int     `json:"request_timeout_ms"`
@@ -143,7 +142,6 @@ func InitConfig(path string) error {
 		Model:            "Basic",
 		CSVDir:           ".anki_csv",
 		AnkiEndpoint:     DefaultAnkiEndpoint,
-		MarkCheckbox:     false,
 		AllowDuplicates:  false,
 		Tags:             []string{"obsidian", "voc_list"},
 		RequestTimeoutMs: DefaultRequestTimeoutMs,

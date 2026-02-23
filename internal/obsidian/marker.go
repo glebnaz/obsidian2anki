@@ -12,16 +12,15 @@ import (
 
 // MarkSyncedOptions holds parameters for marking a file as synced.
 type MarkSyncedOptions struct {
-	Deck         string
-	Model        string
-	MarkCheckbox bool
-	Now          time.Time // If zero, uses time.Now().
+	Deck  string
+	Model string
+	Now   time.Time // If zero, uses time.Now().
 }
 
 // MarkSynced updates the given markdown file's YAML frontmatter to record
 // anki_synced: true, anki_synced_at (RFC3339), anki_deck, and anki_model.
-// If mark_checkbox is true, it also replaces "- [ ] anki_synced" with
-// "- [x] anki_synced" in the body, or appends "- [x] anki_synced" if absent.
+// It also removes any "- [ ] anki_synced" or "- [x] anki_synced" checkbox
+// from the body, keeping sync status exclusively in frontmatter.
 // The file is written atomically via a temp file and rename.
 func MarkSynced(path string, opts MarkSyncedOptions) error {
 	data, err := os.ReadFile(path)
@@ -39,10 +38,7 @@ func MarkSynced(path string, opts MarkSyncedOptions) error {
 	content = strings.ReplaceAll(content, "\r", "\n")
 
 	result := updateFrontmatter(content, opts.Deck, opts.Model, now)
-
-	if opts.MarkCheckbox {
-		result = updateCheckbox(result)
-	}
+	result = removeCheckbox(result)
 
 	return atomicWrite(path, []byte(result))
 }
@@ -149,26 +145,12 @@ func newScalarNode(key, value string) *yaml.Node {
 	return &yaml.Node{Kind: yaml.ScalarNode, Value: value}
 }
 
-// updateCheckbox replaces "- [ ] anki_synced" with "- [x] anki_synced"
-// in the body (after frontmatter). If no such checkbox exists, appends one.
-func updateCheckbox(content string) string {
-	const unchecked = "- [ ] anki_synced"
-	const checked = "- [x] anki_synced"
-
-	if strings.Contains(content, unchecked) {
-		return strings.Replace(content, unchecked, checked, 1)
-	}
-
-	// If already checked, leave as is.
-	if strings.Contains(content, checked) {
-		return content
-	}
-
-	// Append the checkbox.
-	if !strings.HasSuffix(content, "\n") {
-		content += "\n"
-	}
-	return content + checked + "\n"
+// removeCheckbox removes any "- [ ] anki_synced" or "- [x] anki_synced"
+// lines from the document body. Sync status is stored only in frontmatter.
+func removeCheckbox(content string) string {
+	content = strings.ReplaceAll(content, "- [ ] anki_synced\n", "")
+	content = strings.ReplaceAll(content, "- [x] anki_synced\n", "")
+	return content
 }
 
 // atomicWrite writes data to a temp file in the same directory and renames it.

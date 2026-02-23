@@ -76,9 +76,6 @@ func TestLoadValidConfig(t *testing.T) {
 	if cfg.AnkiEndpoint != DefaultAnkiEndpoint {
 		t.Errorf("anki_endpoint default: expected %s, got %s", DefaultAnkiEndpoint, cfg.AnkiEndpoint)
 	}
-	if cfg.MarkCheckbox != false {
-		t.Errorf("mark_checkbox default: expected false, got true")
-	}
 	if cfg.AllowDuplicates != false {
 		t.Errorf("allow_duplicates default: expected false, got true")
 	}
@@ -100,7 +97,6 @@ func TestLoadOverrideDefaults(t *testing.T) {
 
 	cfgMap := fullConfig(vault)
 	cfgMap["anki_endpoint"] = "http://localhost:9999"
-	cfgMap["mark_checkbox"] = true
 	cfgMap["allow_duplicates"] = true
 	cfgMap["tags"] = []string{"custom"}
 	cfgMap["request_timeout_ms"] = 10000
@@ -115,9 +111,6 @@ func TestLoadOverrideDefaults(t *testing.T) {
 
 	if cfg.AnkiEndpoint != "http://localhost:9999" {
 		t.Errorf("anki_endpoint: expected http://localhost:9999, got %s", cfg.AnkiEndpoint)
-	}
-	if cfg.MarkCheckbox != true {
-		t.Errorf("mark_checkbox: expected true, got false")
 	}
 	if cfg.AllowDuplicates != true {
 		t.Errorf("allow_duplicates: expected true, got false")

@@ -130,10 +130,9 @@ func syncSingleFile(cfg *config.Config, f obsidian.FileInfo, dryRun bool) error 
 	}
 
 	if err := obsidian.MarkSynced(f.Path, obsidian.MarkSyncedOptions{
-		Deck:         cfg.Deck,
-		Model:        cfg.Model,
-		MarkCheckbox: cfg.MarkCheckbox,
-		Now:          now,
+		Deck:  cfg.Deck,
+		Model: cfg.Model,
+		Now:   now,
 	}); err != nil {
 		return fmt.Errorf("mark synced: %w", err)
 	}
@@ -226,8 +225,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case syncFileMsg:
 		if msg.err != nil {
 			m.syncLog = append(m.syncLog, fmt.Sprintf("FAIL %s: %v", filepath.Base(msg.path), msg.err))
+			m.syncing = false
 		} else if msg.path != "" {
 			m.syncLog = append(m.syncLog, fmt.Sprintf("OK   %s", filepath.Base(msg.path)))
+			m.syncing = false
+			m.syncStatus = "sync complete"
+			return m, scanCmd(m.cfg.NotesDir)
 		}
 		return m, nil
 
@@ -279,9 +282,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.syncing = true
 			m.syncStatus = "syncing " + filepath.Base(m.files[m.cursor].Path) + "..."
 			m.syncLog = nil
-			return m, tea.Batch(m.syncSelectedCmd(), func() tea.Msg {
-				return syncAllDoneMsg{}
-			})
+			return m, m.syncSelectedCmd()
 		}
 		return m, nil
 

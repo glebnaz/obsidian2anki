@@ -58,6 +58,16 @@ func (h *ankiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_ = json.Unmarshal(req.Params, &p)
 		h.models = append(h.models, p.ModelName)
 		mustEncode(w, map[string]any{"result": map[string]any{"id": 67890}, "error": nil})
+	case "canAddNotes":
+		var p struct {
+			Notes []json.RawMessage `json:"notes"`
+		}
+		_ = json.Unmarshal(req.Params, &p)
+		canAdd := make([]bool, len(p.Notes))
+		for i := range canAdd {
+			canAdd[i] = true
+		}
+		mustEncode(w, map[string]any{"result": canAdd, "error": nil})
 	case "addNotes":
 		var p struct {
 			Notes []json.RawMessage `json:"notes"`
@@ -332,6 +342,16 @@ func TestSyncPartialFailure(t *testing.T) {
 			mustEncode(w, map[string]any{"result": []string{"TestDeck"}, "error": nil})
 		case "modelNames":
 			mustEncode(w, map[string]any{"result": []string{"TestModel"}, "error": nil})
+		case "canAddNotes":
+			var p struct {
+				Notes []json.RawMessage `json:"notes"`
+			}
+			_ = json.Unmarshal(req.Params, &p)
+			canAdd := make([]bool, len(p.Notes))
+			for i := range canAdd {
+				canAdd[i] = true
+			}
+			mustEncode(w, map[string]any{"result": canAdd, "error": nil})
 		case "addNotes":
 			callCount++
 			if callCount == 1 {

@@ -207,7 +207,9 @@ type Note struct {
 }
 
 // AddNotes sends notes to Anki in batches using the addNotes action.
-// Returns an error if any note in any batch fails (null element in result).
+// When AllowDup is false, notes already present in Anki are silently skipped
+// so that a file with pre-existing cards is still marked as synced.
+// Returns an error if any note in any batch fails for a non-duplicate reason.
 func (c *Client) AddNotes(notes []Note, batchSize int) error {
 	if batchSize <= 0 {
 		batchSize = 100
@@ -236,6 +238,20 @@ func (c *Client) AddNotes(notes []Note, batchSize int) error {
 			}
 		}
 
+		// When duplicates are not allowed, pre-filter notes that already exist
+		// in Anki. This prevents a "cannot create note because it is a duplicate"
+		// error from blocking files that were partially or fully synced before.
+		if len(batch) > 0 && !batch[0].AllowDup {
+			filtered, err := c.filterAddable(ankiNotes)
+			if err != nil {
+				return fmt.Errorf("anki: canAddNotes batch %d-%d: %w", i, end-1, err)
+			}
+			if len(filtered) == 0 {
+				continue // all notes already in Anki — skip batch
+			}
+			ankiNotes = filtered
+		}
+
 		raw, err := c.do("addNotes", map[string]interface{}{
 			"notes": ankiNotes,
 		})
@@ -250,12 +266,34 @@ func (c *Client) AddNotes(notes []Note, batchSize int) error {
 
 		for j, id := range results {
 			if id == nil {
-				return fmt.Errorf("anki: addNotes failed for note %d (Front: %q)", i+j, batch[j].Front)
+				return fmt.Errorf("anki: addNotes failed for note %d (Front: %q)", i+j, ankiNotes[j]["fields"].(map[string]string)["Front"])
 			}
 		}
 	}
 
 	return nil
+}
+
+// filterAddable calls canAddNotes and returns only the notes that can be added
+// (i.e. are not duplicates of existing notes in Anki).
+func (c *Client) filterAddable(ankiNotes []map[string]interface{}) ([]map[string]interface{}, error) {
+	raw, err := c.do("canAddNotes", map[string]interface{}{"notes": ankiNotes})
+	if err != nil {
+		return nil, err
+	}
+
+	var canAdd []bool
+	if err := json.Unmarshal(raw, &canAdd); err != nil {
+		return nil, fmt.Errorf("parse canAddNotes result: %w", err)
+	}
+
+	var filtered []map[string]interface{}
+	for j, ok := range canAdd {
+		if ok {
+			filtered = append(filtered, ankiNotes[j])
+		}
+	}
+	return filtered, nil
 }
 
 // EnsureModel checks if a model exists and creates it if missing.

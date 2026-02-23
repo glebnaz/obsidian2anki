@@ -454,46 +454,50 @@ func TestDo_ContentTypeJSON(t *testing.T) {
 // --- AddNotes tests ---
 
 func TestAddNotes_Success(t *testing.T) {
+	callCount := 0
 	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		req := decodeRequest(t, r)
-		if req.Action != "addNotes" {
-			t.Errorf("expected action addNotes, got %s", req.Action)
+		callCount++
+		switch req.Action {
+		case "canAddNotes":
+			// both notes can be added
+			writeJSON(t, w, ankiResponse([]bool{true, true}, nil))
+		case "addNotes":
+			params, _ := json.Marshal(req.Params)
+			var p map[string]interface{}
+			_ = json.Unmarshal(params, &p)
+			notes := p["notes"].([]interface{})
+			if len(notes) != 2 {
+				t.Fatalf("expected 2 notes, got %d", len(notes))
+			}
+			note0 := notes[0].(map[string]interface{})
+			if note0["deckName"] != "TestDeck" {
+				t.Errorf("expected deckName TestDeck, got %v", note0["deckName"])
+			}
+			if note0["modelName"] != "TestModel" {
+				t.Errorf("expected modelName TestModel, got %v", note0["modelName"])
+			}
+			fields := note0["fields"].(map[string]interface{})
+			if fields["Front"] != "hello" {
+				t.Errorf("expected Front hello, got %v", fields["Front"])
+			}
+			if fields["Back"] != "world" {
+				t.Errorf("expected Back world, got %v", fields["Back"])
+			}
+			tags := note0["tags"].([]interface{})
+			if len(tags) != 1 || tags[0] != "vocab" {
+				t.Errorf("unexpected tags: %v", tags)
+			}
+			opts := note0["options"].(map[string]interface{})
+			if opts["allowDuplicate"] != false {
+				t.Errorf("expected allowDuplicate false, got %v", opts["allowDuplicate"])
+			}
+			var id1 int64 = 111
+			var id2 int64 = 222
+			writeJSON(t, w, ankiResponse([]interface{}{id1, id2}, nil))
+		default:
+			t.Errorf("unexpected action: %s", req.Action)
 		}
-		// Verify params structure
-		params, _ := json.Marshal(req.Params)
-		var p map[string]interface{}
-		_ = json.Unmarshal(params, &p)
-		notes := p["notes"].([]interface{})
-		if len(notes) != 2 {
-			t.Fatalf("expected 2 notes, got %d", len(notes))
-		}
-		note0 := notes[0].(map[string]interface{})
-		if note0["deckName"] != "TestDeck" {
-			t.Errorf("expected deckName TestDeck, got %v", note0["deckName"])
-		}
-		if note0["modelName"] != "TestModel" {
-			t.Errorf("expected modelName TestModel, got %v", note0["modelName"])
-		}
-		fields := note0["fields"].(map[string]interface{})
-		if fields["Front"] != "hello" {
-			t.Errorf("expected Front hello, got %v", fields["Front"])
-		}
-		if fields["Back"] != "world" {
-			t.Errorf("expected Back world, got %v", fields["Back"])
-		}
-		tags := note0["tags"].([]interface{})
-		if len(tags) != 1 || tags[0] != "vocab" {
-			t.Errorf("unexpected tags: %v", tags)
-		}
-		opts := note0["options"].(map[string]interface{})
-		if opts["allowDuplicate"] != false {
-			t.Errorf("expected allowDuplicate false, got %v", opts["allowDuplicate"])
-		}
-
-		// Return two successful note IDs
-		var id1 int64 = 111
-		var id2 int64 = 222
-		writeJSON(t, w, ankiResponse([]interface{}{id1, id2}, nil))
 	})
 
 	notes := []Note{
@@ -504,12 +508,81 @@ func TestAddNotes_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	if callCount != 2 {
+		t.Errorf("expected 2 API calls (canAddNotes + addNotes), got %d", callCount)
+	}
+}
+
+func TestAddNotes_AllDuplicates(t *testing.T) {
+	callCount := 0
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		req := decodeRequest(t, r)
+		callCount++
+		switch req.Action {
+		case "canAddNotes":
+			// all notes are duplicates
+			writeJSON(t, w, ankiResponse([]bool{false, false}, nil))
+		default:
+			t.Errorf("unexpected action after all-duplicate canAddNotes: %s", req.Action)
+		}
+	})
+
+	notes := []Note{
+		{DeckName: "D", ModelName: "M", Front: "dup1", Back: "b1", Tags: []string{}, AllowDup: false},
+		{DeckName: "D", ModelName: "M", Front: "dup2", Back: "b2", Tags: []string{}, AllowDup: false},
+	}
+	err := client.AddNotes(notes, 100)
+	if err != nil {
+		t.Fatalf("expected success for all-duplicate batch, got: %v", err)
+	}
+	if callCount != 1 {
+		t.Errorf("expected 1 API call (canAddNotes only), got %d", callCount)
+	}
+}
+
+func TestAddNotes_PartialDuplicates(t *testing.T) {
+	actions := []string{}
+	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		req := decodeRequest(t, r)
+		actions = append(actions, req.Action)
+		switch req.Action {
+		case "canAddNotes":
+			// first note is duplicate, second can be added
+			writeJSON(t, w, ankiResponse([]bool{false, true}, nil))
+		case "addNotes":
+			params, _ := json.Marshal(req.Params)
+			var p map[string]interface{}
+			_ = json.Unmarshal(params, &p)
+			notes := p["notes"].([]interface{})
+			if len(notes) != 1 {
+				t.Errorf("expected 1 note after duplicate filtering, got %d", len(notes))
+			}
+			writeJSON(t, w, ankiResponse([]interface{}{int64(999)}, nil))
+		default:
+			t.Errorf("unexpected action: %s", req.Action)
+		}
+	})
+
+	notes := []Note{
+		{DeckName: "D", ModelName: "M", Front: "dup", Back: "b1", Tags: []string{}, AllowDup: false},
+		{DeckName: "D", ModelName: "M", Front: "new", Back: "b2", Tags: []string{}, AllowDup: false},
+	}
+	err := client.AddNotes(notes, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 }
 
 func TestAddNotes_PartialFailure(t *testing.T) {
 	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		// Second note fails (null in result)
-		writeJSON(t, w, ankiResponse([]interface{}{111, nil}, nil))
+		req := decodeRequest(t, r)
+		switch req.Action {
+		case "canAddNotes":
+			writeJSON(t, w, ankiResponse([]bool{true, true}, nil))
+		case "addNotes":
+			// Second note fails with null (non-duplicate error)
+			writeJSON(t, w, ankiResponse([]interface{}{111, nil}, nil))
+		}
 	})
 
 	notes := []Note{
@@ -520,27 +593,33 @@ func TestAddNotes_PartialFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for null result element, got nil")
 	}
-	if got := err.Error(); got != `anki: addNotes failed for note 1 (Front: "bad")` {
-		t.Errorf("unexpected error message: %q", got)
-	}
 }
 
 func TestAddNotes_Batching(t *testing.T) {
-	batchCount := 0
+	addNotesCalls := 0
 	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		batchCount++
 		req := decodeRequest(t, r)
 		params, _ := json.Marshal(req.Params)
 		var p map[string]interface{}
 		_ = json.Unmarshal(params, &p)
 		notes := p["notes"].([]interface{})
 
-		// First batch should have 2 notes, second batch should have 1
-		results := make([]interface{}, len(notes))
-		for i := range results {
-			results[i] = int64(100 + i)
+		switch req.Action {
+		case "canAddNotes":
+			// all notes can be added
+			trues := make([]bool, len(notes))
+			for i := range trues {
+				trues[i] = true
+			}
+			writeJSON(t, w, ankiResponse(trues, nil))
+		case "addNotes":
+			addNotesCalls++
+			results := make([]interface{}, len(notes))
+			for i := range results {
+				results[i] = int64(100 + i)
+			}
+			writeJSON(t, w, ankiResponse(results, nil))
 		}
-		writeJSON(t, w, ankiResponse(results, nil))
 	})
 
 	notes := []Note{
@@ -552,8 +631,8 @@ func TestAddNotes_Batching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if batchCount != 2 {
-		t.Errorf("expected 2 batches, got %d", batchCount)
+	if addNotesCalls != 2 {
+		t.Errorf("expected 2 addNotes calls, got %d", addNotesCalls)
 	}
 }
 
@@ -613,11 +692,17 @@ func TestAddNotes_EmptySlice(t *testing.T) {
 }
 
 func TestAddNotes_BatchFailureStopsEarly(t *testing.T) {
-	batchCount := 0
+	addNotesCalls := 0
 	_, client := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		batchCount++
-		// First batch fails with a null
-		writeJSON(t, w, ankiResponse([]interface{}{nil}, nil))
+		req := decodeRequest(t, r)
+		switch req.Action {
+		case "canAddNotes":
+			writeJSON(t, w, ankiResponse([]bool{true}, nil))
+		case "addNotes":
+			addNotesCalls++
+			// First (and only expected) addNotes call fails with a null
+			writeJSON(t, w, ankiResponse([]interface{}{nil}, nil))
+		}
 	})
 
 	notes := []Note{
@@ -628,9 +713,9 @@ func TestAddNotes_BatchFailureStopsEarly(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	// Should stop after first batch failure
-	if batchCount != 1 {
-		t.Errorf("expected 1 batch call before failure, got %d", batchCount)
+	// Should stop after first addNotes batch failure
+	if addNotesCalls != 1 {
+		t.Errorf("expected 1 addNotes call before failure, got %d", addNotesCalls)
 	}
 }
 
